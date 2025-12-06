@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Siparişi Tamamla - RexvStore</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f3f4f6; 
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .checkout-container { 
+            max-width: 1024px; 
+            flex-grow: 1;
+        } 
+        input:focus, textarea:focus, select:focus {
+            border-color: #dc2626 !important;
+            box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.5) !important;
+            outline: none;
+        }
+        #payment-method-select {
+            appearance: none; 
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M7%207l3%203%203-3m0%206l-3%203-3-3%22%20stroke%3D%22%23DC2626%22%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem; 
+        }
+        #support-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            cursor: pointer;
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+            background-color: #0088CC; 
+        }
+        #support-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 20px rgba(0, 136, 204, 0.5); 
+        }
+        .footer {
+            background-color: #ffffff;
+            border-top: 1px solid #e5e7eb;
+            padding: 1.5rem 0;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-6 pb-20"> 
+    <div class="checkout-container mx-auto">
+        <div class="flex items-center mb-6">
+            <a href="index.html" class="text-red-600 hover:text-red-700 transition mr-4">
+                <i class="fas fa-chevron-left text-xl"></i>
+            </a>
+            <h1 class="text-3xl font-bold text-gray-800">Siparişi Tamamla</h1>
+        </div>
+
+        <div id="loading-spinner" class="text-center py-10" style="display: none;">
+            <div class="animate-spin rounded-full h-12 w-12 border-4 border-red-500 border-t-transparent mx-auto mb-3"></div>
+            <p class="text-gray-600 font-medium">Veriler yükleniyor...</p>
+        </div>
+
+        <div id="empty-cart" class="bg-white p-8 rounded-xl shadow-lg text-center" style="display: none;">
+            <i class="fas fa-shopping-basket text-6xl text-gray-300 mb-4"></i>
+            <h2 class="text-xl font-semibold mb-2">Sepetiniz Boş Görünüyor!</h2>
+            <a href="index.html" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200 shadow-md">
+                Ürünlere Geri Dön
+            </a>
+        </div>
+
+        <div id="checkout-content" class="lg:grid lg:grid-cols-3 lg:gap-8" style="display: none;">
+            
+            <div class="lg:col-span-3 mb-6">
+                <div class="bg-white p-6 rounded-xl shadow-lg h-min border-b-4 border-red-600">
+                    <h2 class="text-xl font-extrabold mb-4 border-b pb-2 text-gray-800 flex items-center">
+                        <i class="fas fa-box-open text-red-600 mr-2"></i> Sipariş Özeti
+                    </h2>
+                    
+                    <div id="cart-summary-list" class="space-y-4 border-b pb-4 mb-4">
+                    </div>
+
+                    <div class="space-y-2 text-gray-700">
+                        <div class="flex justify-between font-medium">
+                            <span>Ara Toplam</span>
+                            <span id="subtotal-display">0.00 TL</span>
+                        </div>
+                        <div class="flex justify-between text-sm text-green-600">
+                            <span>İndirim</span>
+                            <span id="discount-display">- 0.00 TL</span>
+                        </div>
+                        <div class="flex justify-between font-bold text-xl pt-3 border-t border-gray-200 text-gray-900">
+                            <span>Genel Toplam</span>
+                            <span id="total-display">0.00 TL</span>
+                        </div>
+                        <p id="total-usdt-info" class="text-md font-extrabold text-green-700 text-right mt-2 pt-2 border-t border-dashed border-green-200" style="display: none;"></p>
+                    </div>
+                    
+                    <button onclick="window.location.href='index.html'" class="w-full mt-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 rounded-lg transition duration-200 text-sm">
+                        <i class="fas fa-pencil-alt mr-2"></i> Sepeti Düzenle
+                    </button>
+
+                </div>
+            </div>
+            
+            <div class="lg:col-span-2 space-y-6">
+                
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-xl font-bold mb-4 pb-2 text-gray-800 flex items-center">
+                        <span class="bg-red-600 text-white text-sm font-bold w-6 h-6 flex items-center justify-center rounded-full mr-3">1</span>
+                        E-posta Bilgisi
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label for="customer-email" class="block text-sm font-medium text-gray-700">E-posta Adresiniz *</label>
+                            <input type="email" id="customer-email" required class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3" placeholder="mail@ornek.com">
+                            <p class="text-xs text-gray-500 mt-1">Fatura, indirme linki ve tüm bilgiler bu adrese gönderilecektir.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-xl font-bold mb-4 border-b pb-2 text-gray-800 flex items-center">
+                        <span class="bg-red-600 text-white text-sm font-bold w-6 h-6 flex items-center justify-center rounded-full mr-3">2</span>
+                        Ödeme Yöntemi Seçin
+                    </h2>
+                    
+                    <div class="mb-6">
+                        <label for="payment-method-select" class="block text-sm font-medium text-gray-700 mb-2">Tercih Ettiğiniz Ödeme Yöntemi</label>
+                        <select id="payment-method-select" onchange="updatePaymentDetails(this.value)" class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3 bg-white font-semibold cursor-pointer" value="EFT">
+                            <option value="EFT">🏦 EFT / Havale</option>
+                            <option value="USDT">₿ Kripto (USDT TRC20)</option>
+                            <option value="CREDIT">💳 Kart / Kredi Kartı</option>
+                        </select>
+                    </div>
+
+                    <div id="payment-details-content" class="space-y-6">
+                        
+                        <div id="payment-EFT" data-content>
+                            <h3 class="text-lg font-semibold mb-3 text-gray-700">Banka Bilgileri</h3>
+                            <div class="space-y-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+                                <div class="flex justify-between items-center text-sm font-medium text-gray-700">
+                                    <span>Hesap Sahibi:</span>
+                                    <span id="bank-name-display" class="font-bold text-gray-900">REX VİRTUAL STORE A.Ş.</span>
+                                </div>
+                                <div class="flex justify-between items-center text-sm font-medium text-gray-700">
+                                    <span>IBAN (Kopyala):</span>
+                                    <span id="bank-iban-display" class="font-bold text-red-600 cursor-pointer hover:underline" data-copy-text="TR550000111122223333444455" onclick="copyToClipboard('bank-iban-display')">
+                                        TR55 0000 1111 2222 3333 4444 55
+                                    </span>
+                                </div>
+                                <p class="text-xs text-red-700 pt-2 border-t border-red-100">
+                                    <i class="fas fa-info-circle mr-1"></i> Açıklama kısmına SADECE e-posta adresinizi yazınız.
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div id="payment-USDT" data-content style="display: none;">
+                            <h3 class="text-lg font-semibold mb-3 text-gray-700">Kripto Para Bilgileri (TRC20 Ağı)</h3>
+                            <div class="space-y-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+                                <div class="flex justify-between items-center text-sm font-medium text-gray-700">
+                                    <span>Gönderilecek Miktar:</span>
+                                    <span id="usdt-amount-display" class="font-extrabold text-green-700 text-lg cursor-pointer hover:underline" data-copy-text="0.00" onclick="copyToClipboard('usdt-amount-display')">
+                                        <i class="fas fa-spinner fa-spin mr-1"></i> Hesaplama...
+                                    </span>
+                                </div>
+                                
+                                <div class="text-sm font-medium text-gray-700">
+                                    <span class="block mb-1">TRC20 Cüzdan Adresi (Kopyala):</span>
+                                    <span id="usdt-address-display" 
+                                        class="font-bold text-gray-900 cursor-pointer hover:underline block p-2 bg-white rounded break-all" 
+                                        data-copy-text="TRC20_ADRESİ_BURAYA_GELMELİ_ORNEK_AĞTRON"
+                                        onclick="copyToClipboard('usdt-address-display')">
+                                        TRC20_ADRESİ_BURAYA_GELMELİ_ORNEK_AĞTRON
+                                    </span>
+                                </div>
+                                <p class="text-xs text-green-700 pt-2 border-t border-green-100">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i> Lütfen yalnızca **USDT (TRC20 - TRON Ağı)** gönderin ve doğru ağı seçtiğinizden emin olun!
+                                </p>
+                            </div>
+                        </div>
+
+                        <div id="payment-CREDIT" data-content style="display: none;">
+                            <div class="p-6 bg-blue-50 border border-blue-200 rounded-lg">
+                                <h3 class="text-xl font-bold text-blue-700 mb-4 text-center">3D Güvenli Kart Ödeme Ekranı Simülasyonu</h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label for="card-number" class="block text-sm font-medium text-gray-700">Kart Numarası *</label>
+                                        <input type="text" id="card-number" required pattern="\d{4}\s?\d{4}\s?\d{4}\s?\d{4}" maxlength="19" placeholder="XXXX XXXX XXXX XXXX" class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3">
+                                    </div>
+                                    <div>
+                                        <label for="card-holder" class="block text-sm font-medium text-gray-700">Kart Üzerindeki İsim Soyisim *</label>
+                                        <input type="text" id="card-holder" required class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3" placeholder="AD SOYAD">
+                                    </div>
+                                    <div class="grid grid-cols-3 gap-4">
+                                        <div class="col-span-2">
+                                            <label for="card-expiry" class="block text-sm font-medium text-gray-700">Geçerlilik Tarihi (Ay/Yıl) *</label>
+                                            <input type="text" id="card-expiry" required pattern="\d{2}/\d{2}" maxlength="5" placeholder="AA/YY" class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3">
+                                        </div>
+                                        <div>
+                                            <label for="card-cvv" class="block text-sm font-medium text-gray-700">CVV *</label>
+                                            <input type="text" id="card-cvv" required pattern="\d{3,4}" maxlength="4" placeholder="XXX" class="mt-1 block w-full border border-gray-300 rounded-lg shadow-sm p-3">
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-blue-700 mt-4 text-center">Bu bir simülasyon formudur. Gerçek ödeme yapılmayacaktır.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-xl font-bold mb-4 border-b pb-2 text-gray-800 flex items-center">
+                        <span class="bg-red-600 text-white text-sm font-bold w-6 h-6 flex items-center justify-center rounded-full mr-3">3</span>
+                        Siparişi Onayla
+                    </h2>
+                    
+                    <form id="checkout-form" onsubmit="processOrder(event)">
+                        <input type="hidden" id="selected-payment-method" value="EFT"> 
+                        
+                        <div id="receipt-upload-section">
+                            <label for="receipt-file" class="block text-sm font-medium text-gray-700 mb-2">Ödeme Dekontu Yükle *</label>
+                            <input type="file" id="receipt-file" required accept="image/*,application/pdf" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
+                            <p class="text-xs text-red-500 mt-1 font-semibold">NOT: Dosya sunucuya yüklenmeyecek, sadece seçilmesi zorunlu tutulacaktır.</p>
+                        </div>
+                        <div class="mt-6 flex items-start">
+                            <input type="checkbox" id="terms-accepted" required class="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500 mt-1">
+                            <label for="terms-accepted" class="ml-3 text-sm font-medium text-gray-900">
+                                <a href="sartlar_ve_kosullar.html" target="_blank" class="text-red-600 hover:underline">Şartlar ve Koşulları</a> okudum ve kabul ediyorum. *
+                            </label>
+                        </div>
+
+                        <button type="submit" id="complete-order-btn" class="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 shadow-xl text-lg disabled:bg-red-400">
+                            <i class="fas fa-check-circle mr-2"></i> Ödemeyi Bildir ve Ürünü Al
+                        </button>
+                    </form>
+                </div>
+                
+            </div>
+            
+            <div class="lg:col-span-1 hidden lg:block">
+                </div>
+
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="checkout-container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center text-sm text-gray-500">
+            <div class="mb-3 sm:mb-0">
+                &copy; 2024 RexvStore. Tüm Hakları Saklıdır.
+            </div>
+            <div class="space-x-4">
+                <a href="gizlilik_politikasi.html" target="_blank" class="hover:text-red-600 transition">Gizlilik Politikası</a>
+                <a href="sartlar_ve_kosullar.html" target="_blank" class="hover:text-red-600 transition">Şartlar ve Koşullar</a>
+                <a href="hakkimizda.html" target="_blank" class="hover:text-red-600 transition">Hakkımızda</a>
+            </div>
+        </div>
+    </footer>
+    <a id="support-button" href="https://t.me/rexvstoredestek" target="_blank" class="text-white p-4 rounded-full shadow-lg">
+        <i class="fab fa-telegram-plane text-2xl"></i>
+    </a>
+
+
+<script type="module">
+    // 🔥 Firebase Modülleri
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, query, where, addDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+    
+    // --- 1. GLOBAL DEĞİŞKENLER VE AYARLAR ---
+    let app, db, auth; 
+    let productsData = []; 
+    let cartItems = [];    
+    let finalTotalTL = 0;
+    
+    // USDT kuru: Burayı gerektiğinde güncelleyin.
+    const USDT_EXCHANGE_RATE = 42.0; 
+    
+    // 🚨🚨🚨 BURAYI KENDİ FIREBASE AYARLARINIZLA DOLDURUN 🚨🚨🚨
+    const firebaseConfig = {
+        apiKey: "AIzaSyCR5mseCZP5tWLxzJHMewUTx3ipwIZgNoM", 
+        authDomain: "rexvstore.firebaseapp.com",
+        projectId: "rexvstore",
+        storageBucket: "rexvstore.appspot.com", 
+        messagingSenderId: "732705231158",
+        appId: "1:732705231158:web:ba5ad9c627dcb8ea6ae397",
+    };
+    
+    const APP_ID_PATH = 'rexvstore-main'; 
+    const PUBLIC_DATA_ROOT = `artifacts/${APP_ID_PATH}/public/data`;
+    const PRODUCTS_PATH = () => `${PUBLIC_DATA_ROOT}/products`; 
+    const ORDERS_PATH = 'orders'; 
+
+    // Yardımcı Fonksiyon: Diziyi 10'luk parçalara ayırır (Firestore limitasyonu için)
+    function chunkArray(array, chunkSize) {
+        const chunks = [];
+        for (let i = 0; i < array.length; i += chunkSize) {
+            chunks.push(array.slice(i, i + chunkSize));
+        }
+        return chunks;
+    }
+    
+    // --- 2. FIREBASE BAŞLATMA & VERİ ÇEKME ---
+    
+    // Asıl veri çekme ve render etme işlemini yapan fonksiyon
+    async function fetchAndRenderData() {
+        try {
+            const rawCart = localStorage.getItem('rexv_cart'); 
+            cartItems = rawCart ? JSON.parse(rawCart) : [];
+            
+            if (cartItems.length === 0) {
+                showEmptyCart();
+                return;
+            }
+
+            const productIds = cartItems.map(item => item.id);
+            productsData = []; 
+
+            if (productIds.length > 0) {
+                const productsRef = collection(db, PRODUCTS_PATH());
+                
+                // Firestore IN sorgusunun 10 ID limitini aşmak için parçalara ayırma
+                const idChunks = chunkArray(productIds, 10);
+                
+                const queryPromises = idChunks.map(chunk => {
+                    const q = query(productsRef, where("__name__", "in", chunk)); 
+                    return getDocs(q);
+                });
+                
+                const results = await Promise.all(queryPromises);
+                
+                // Tüm sonuçları tek bir dizide birleştir
+                results.forEach(snapshot => {
+                    snapshot.docs.forEach(doc => {
+                        productsData.push({ id: doc.id, ...doc.data() });
+                    });
+                });
+            }
+
+            if (productsData.length === 0 && cartItems.length > 0) {
+                 // Veri çekilemediyse (güvenlik kuralı hatası veya yanlış yol)
+                 throw new Error("Sepetteki ürünlerin verileri çekilemedi. Güvenlik kurallarını veya veritabanı yolunu kontrol edin.");
+            }
+
+            renderCartSummary(); 
+            updatePaymentDetails('EFT'); 
+
+        } catch (error) {
+            console.error("🔥 HATA: Veri Yüklenirken Hata Oluştu:", error);
+            
+            let errorMessage = 'Sepet içeriği yüklenirken kritik bir sorun oluştu.';
+            
+            if (error.code === 'permission-denied' || error.message.includes('permission-denied')) {
+                 errorMessage = 'KRİTİK HATA: Firebase Firestore Güvenlik Kurallarınız, ürünleri okumanıza izin vermiyor. Lütfen kuralları kontrol edin.';
+            }
+
+            Swal.fire('Hata', errorMessage, 'error');
+            showEmptyCart(); 
+        } finally {
+            document.getElementById('loading-spinner').style.display = 'none';
+        }
+    }
+
+    async function initFirebase() {
+        document.getElementById('loading-spinner').style.display = 'block';
+        document.getElementById('checkout-content').style.display = 'none'; 
+
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            
+            // onAuthStateChanged, kullanıcının oturum durumunu bekler
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    // Kullanıcı Giriş yapmış, verileri çek
+                    await fetchAndRenderData();
+                } else {
+                    // Kullanıcı Giriş yapmamışsa, index.html'e yönlendir
+                    console.warn("Kullanıcı giriş yapmamış. Yönlendiriliyor...");
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Giriş Gerekli',
+                        text: 'Siparişi tamamlamak için önce giriş yapmalısınız.',
+                        confirmButtonText: 'Giriş Yap',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false
+                    }).then(() => {
+                        // Eğer login.html sayfanız varsa oraya yönlendirilebilir.
+                        window.location.href = 'index.html'; 
+                    });
+                }
+            });
+
+        } catch (error) {
+            console.error("🔥 HATA: Firebase Başlatılamadı:", error);
+            Swal.fire('Hata', 'Firebase bağlantısı kurulamadı. Ayarlarınızı kontrol edin.', 'error');
+            document.getElementById('loading-spinner').style.display = 'none';
+        }
+    }
+    
+    // --- 3. RENDER FONKSİYONLARI ---
+
+    function showEmptyCart() {
+        document.getElementById('empty-cart').style.display = 'block';
+        document.getElementById('checkout-content').style.display = 'none';
+        document.getElementById('loading-spinner').style.display = 'none';
+    }
+    
+    function renderCartSummary() {
+        const summaryDiv = document.getElementById('cart-summary-list');
+        let subtotal = 0;
+        let discount = 0;
+        
+        if (cartItems.length === 0) {
+            showEmptyCart();
+            return;
+        }
+
+        const summaryHtml = cartItems.map(cartItem => {
+            const product = productsData.find(p => p.id === cartItem.id);
+            if (!product) {
+                // Eğer ürün bulunamazsa, kullanıcıya uyarı vermeye devam et
+                console.warn(`Ürün verisi bulunamadı: ${cartItem.id}. Bu ürün özet listesine eklenmiyor.`);
+                return ``; 
+            } 
+
+            const unitPrice = product.price || 0;
+            const discountedPrice = product.discounted_price || unitPrice;
+            const quantity = cartItem.qty || 1; 
+            
+            const totalItemPrice = discountedPrice * quantity; 
+            const itemDiscount = (unitPrice - discountedPrice) * quantity;
+
+            subtotal += unitPrice * quantity; 
+            discount += itemDiscount;
+            
+            return `
+                <div class="flex items-start justify-between">
+                    <div class="flex-1 pr-4">
+                        <p class="font-semibold text-gray-900">${product.name_tr || product.name}</p>
+                        <p class="text-xs text-gray-500">${quantity} adet x ${discountedPrice.toLocaleString('tr-TR')} TL</p>
+                    </div>
+                    <span class="font-bold text-gray-800 flex-shrink-0">
+                        ${totalItemPrice.toLocaleString('tr-TR')} TL
+                    </span>
+                </div>
+            `;
+        }).join('');
+
+        finalTotalTL = subtotal - discount;
+        
+        // USDT hesaplaması
+        const finalTotalUSDT = (finalTotalTL / USDT_EXCHANGE_RATE).toFixed(2);
+
+        summaryDiv.innerHTML = summaryHtml;
+        document.getElementById('subtotal-display').textContent = subtotal.toLocaleString('tr-TR') + ' TL';
+        document.getElementById('discount-display').textContent = '- ' + discount.toLocaleString('tr-TR') + ' TL';
+        document.getElementById('total-display').textContent = finalTotalTL.toLocaleString('tr-TR') + ' TL';
+        
+        document.getElementById('usdt-amount-display').textContent = `${finalTotalUSDT} USDT`;
+        document.getElementById('usdt-amount-display').dataset.copyText = finalTotalUSDT; 
+        document.getElementById('total-usdt-info').innerHTML = `~ ${finalTotalUSDT} USDT (Kur: ${USDT_EXCHANGE_RATE.toFixed(1)} TL)`;
+
+        document.getElementById('checkout-content').style.display = 'grid'; 
+        document.getElementById('total-usdt-info').style.display = 'block';
+    }
+
+
+    // --- 4. ÖDEME YÖNTEMİ YÖNETİMİ (Fonksiyonlar aynı kaldı) ---
+    window.updatePaymentDetails = function(selectedMethod) {
+        
+        document.querySelectorAll('[data-content]').forEach(content => {
+            content.style.display = 'none';
+        });
+        document.getElementById(`payment-${selectedMethod}`).style.display = 'block';
+        
+        document.getElementById('selected-payment-method').value = selectedMethod;
+        
+        const receiptSection = document.getElementById('receipt-upload-section');
+        const receiptFile = document.getElementById('receipt-file');
+        const completeOrderBtn = document.getElementById('complete-order-btn');
+
+        const isCredit = selectedMethod === 'CREDIT';
+        document.getElementById('card-number')?.toggleAttribute('required', isCredit);
+        document.getElementById('card-holder')?.toggleAttribute('required', isCredit);
+        document.getElementById('card-expiry')?.toggleAttribute('required', isCredit);
+        document.getElementById('card-cvv')?.toggleAttribute('required', isCredit);
+
+
+        if (isCredit) {
+            receiptSection.style.display = 'none';
+            receiptFile.removeAttribute('required');
+            completeOrderBtn.innerHTML = '<i class="fas fa-credit-card mr-2"></i> Kart ile Ödemeyi Tamamla (Simülasyon)';
+        } else {
+            receiptSection.style.display = 'block';
+            receiptFile.setAttribute('required', 'required');
+            completeOrderBtn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Ödemeyi Bildir ve Ürünü Al';
+        }
+    };
+    
+    // --- 5. KOPYALAMA İŞLEMİ (Fonksiyonlar aynı kaldı) ---
+
+    window.copyToClipboard = function(elementId) {
+        const element = document.getElementById(elementId);
+        const textToCopy = element.dataset.copyText || element.textContent.trim().replace(/\s/g, ''); 
+        
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            Swal.fire({
+                icon: 'success',
+                title: 'Kopyalandı!',
+                text: textToCopy,
+                showConfirmButton: false,
+                timer: 1000
+            });
+        }).catch(err => {
+            console.error('Kopyalama hatası: ', err);
+            Swal.fire('Hata', 'Kopyalama Başarısız.', 'error');
+        });
+    };
+
+    // --- 6. SİPARİŞ İŞLEME FONKSİYONU ---
+
+    window.processOrder = async function(event) {
+        event.preventDefault();
+        
+        const paymentMethod = document.getElementById('selected-payment-method').value;
+        const customerEmail = document.getElementById('customer-email').value;
+
+        if (!customerEmail || !customerEmail.includes('@') || !customerEmail.includes('.')) {
+            Swal.fire('Hata!', 'Lütfen geçerli bir e-posta adresi girin.', 'error');
+            return;
+        }
+
+        if (!document.getElementById('terms-accepted').checked) {
+            Swal.fire('Hata!', 'Siparişi tamamlamak için Şartlar ve Koşulları kabul etmelisiniz.', 'error');
+            return;
+        }
+
+        // Kullanıcı kontrolü (Gerekli, ancak initFirebase'de de yapılıyor)
+        if (!auth.currentUser) {
+            Swal.fire('Hata!', 'Siparişi tamamlamak için giriş yapmanız gerekiyor.', 'error');
+            return;
+        }
+        
+        const btn = document.getElementById('complete-order-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Sipariş Oluşturuluyor...';
+        
+        try {
+            let receiptURL = 'N/A'; 
+            let status = 'Beklemede (Ödeme Bildirildi)';
+            
+            if (paymentMethod === 'CREDIT') {
+                await new Promise(r => setTimeout(r, 1500)); 
+                status = 'Başarılı (Kart Simülasyonu)'; 
+                
+            } else {
+                const receiptFile = document.getElementById('receipt-file').files[0];
+                if (!receiptFile) {
+                    Swal.fire('Hata!', 'Ödemenizi tamamlamak için dekont seçmelisiniz.', 'error');
+                    btn.disabled = false;
+                    updatePaymentDetails(paymentMethod);
+                    return; 
+                }
+                
+                btn.innerHTML = '<i class="fas fa-check-double mr-2"></i> Dekont Seçildi. Kaydediliyor...';
+                receiptURL = `Yüklendi (Dosya Adı: ${receiptFile.name})`;
+                status = 'Beklemede (Dekont Seçimi Onaylandı)';
+            }
+            
+            // Sipariş Detaylarını Hazırlama
+            const orderDetails = cartItems.map(item => {
+                const product = productsData.find(p => p.id === item.id);
+                
+                return {
+                    productId: item.id,
+                    productName: product?.name_tr || product?.name || 'Bilinmeyen Ürün',
+                    quantity: item.qty || 1, 
+                    finalPrice: product?.discounted_price || product?.price || 0, 
+                };
+            });
+
+            const orderData = {
+                customer: {
+                    email: customerEmail,
+                    name: (paymentMethod === 'CREDIT' ? document.getElementById('card-holder').value : auth.currentUser.email || 'Kullanıcı Adı Yok'), 
+                    phone: 'Telefon Bilgisi Yok', 
+                },
+                items: orderDetails,
+                totalTL: finalTotalTL,
+                totalUSDT: (finalTotalTL / USDT_EXCHANGE_RATE).toFixed(2),
+                paymentMethod: paymentMethod,
+                receiptURL: receiptURL,
+                status: status, 
+                createdAt: new Date(),
+                // Artık sadece giriş yapmış kullanıcı ID'sini kullanırız
+                userId: auth.currentUser.uid, 
+            };
+            
+            // Firestore'a Sipariş Ekleme
+            btn.innerHTML = '<i class="fas fa-database mr-2"></i> Veritabanına Kaydediliyor...';
+            const docRef = await addDoc(collection(db, ORDERS_PATH), orderData);
+
+            // Sepeti Temizleme
+            localStorage.removeItem('rexv_cart');
+            
+            await Swal.fire({
+                title: '🎉 Siparişiniz Başarıyla Alındı!',
+                html: `<p class="text-base text-gray-700 mb-3">Sipariş Numaranız: <b>#${docRef.id.substring(0, 8).toUpperCase()}</b></p><p class="text-sm text-gray-600">Sipariş detaylarınızı şimdi görüntüleyebilirsiniz.</p>`,
+                icon: 'success',
+                confirmButtonText: 'Siparişlerime Git',
+                allowOutsideClick: false,
+                allowEscapeKey: false
+            });
+
+            window.location.href = 'siparislerim.html'; 
+
+        } catch (error) {
+            console.error("🔥 SİPARİŞ OLUŞTURMA HATASI:", error);
+            
+            let errorMessage = 'Siparişiniz oluşturulamadı. Lütfen sunucu bağlantınızı veya Firebase kurallarını kontrol edin.';
+            
+            if (error.code === 'permission-denied' || error.message.includes('permission-denied')) {
+                 errorMessage = 'VERİTABANI YAZMA HATASI: Firebase Firestore Güvenlik Kurallarınız, **orders** koleksiyonuna yazmamıza izin vermiyor olabilir (Authenticated kullanıcı kuralı).';
+            }
+
+            Swal.fire('Hata!', errorMessage + ' Detaylar için konsolu inceleyin.', 'error');
+            
+        } finally {
+            btn.disabled = false;
+            updatePaymentDetails(paymentMethod);
+        }
+    }
+
+    // Uygulama Başlatma
+    window.onload = initFirebase;
+    
+</script>
+</body>
+</html>
