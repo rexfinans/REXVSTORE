@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Siparişlerim - RexvStore</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        /* Temel Ayarlar */
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #0f172a; 
+            color: #f1f5f9; 
+        }
+        .header-bg { background-color: #1e293b; border-bottom: 1px solid #334155; }
+
+        /* Sipariş Kartı */
+        .order-card {
+            background-color: #1e293b; 
+            border: 1px solid #334155; 
+            border-radius: 0.75rem; /* rounded-xl */
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .order-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.5); /* Daha belirgin gölge */
+        }
+
+        /* Durum Renkleri */
+        .status-Beklemede { background-color: #f59e0b; } /* Amber - Ödeme Bildirildi */
+        .status-TeslimEdildi { background-color: #10b981; } /* Emerald */
+        .status-IptalEdildi { background-color: #ef4444; } /* Red */
+        .status-Islemde { background-color: #3b82f6; } /* Blue - Kontrol ediliyor */
+        
+        /* 🔥 YENİ: Modal Stilleri */
+        .custom-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: all 0.3s; }
+        .custom-modal.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            background: #1e293b; 
+            max-width: 500px;
+            width: 95%; 
+            max-height: 90vh; 
+            border-radius: 16px; 
+            transform: scale(0.9); 
+            transition: transform 0.3s; 
+            border: 1px solid #334155;
+            padding: 30px;
+        }
+        .custom-modal.active .modal-box { transform: scale(1); }
+
+        /* Mobil Cihazlarda Alt Menü için Padding */
+        @media (max-width: 767px) {
+            body {
+                padding-bottom: 56px; 
+            }
+        }
+        /* Alt Menü Stili */
+        #bottom-nav {
+             height: 56px; 
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <div id="support-modal" class="custom-modal">
+        <div class="modal-box relative">
+            <button onclick="closeSupportModal()" class="absolute top-4 right-4 text-slate-400 hover:text-red-600 text-2xl">&times;</button>
+            <h3 class="text-2xl font-bold text-white mb-6 border-b border-slate-700 pb-3">
+                <i class="fas fa-headset text-red-500 mr-2"></i> Destek Talebi Oluştur
+            </h3>
+            
+            <p class="text-slate-400 mb-6">Lütfen sorununuzu en iyi tanımlayan seçeneği işaretleyin:</p>
+
+            <div class="space-y-4" id="support-options-container">
+                <button onclick="openTelegramWithQuery('Sipariş Gecikmesi: [Sipariş No]', 'Sipariş No: #... Siparişimin teslimat süresini öğrenmek istiyorum.')" 
+                        class="w-full text-left bg-slate-700 hover:bg-slate-600 p-4 rounded-lg font-semibold text-white transition flex items-center gap-3">
+                    <i class="fas fa-clock text-yellow-400 text-lg"></i> Sipariş Teslimat Süresi
+                </button>
+                <button onclick="openTelegramWithQuery('Hatalı / Eksik Ürün: [Sipariş No]', 'Sipariş No: #... Teslim edilen üründe hata/eksiklik bulunuyor.')" 
+                        class="w-full text-left bg-slate-700 hover:bg-slate-600 p-4 rounded-lg font-semibold text-white transition flex items-center gap-3">
+                    <i class="fas fa-bug text-red-400 text-lg"></i> Hatalı veya Eksik Ürün
+                </button>
+                <button onclick="openTelegramWithQuery('Kurulum / Kullanım Sorunu: [Sipariş No]', 'Sipariş No: #... Ürünün kurulumu veya kullanımı hakkında teknik desteğe ihtiyacım var.')" 
+                        class="w-full text-left bg-slate-700 hover:bg-slate-600 p-4 rounded-lg font-semibold text-white transition flex items-center gap-3">
+                    <i class="fas fa-cogs text-blue-400 text-lg"></i> Kurulum ve Kullanım Desteği
+                </button>
+                <button onclick="openTelegramWithQuery('Diğer Konular / İade', 'Konu: ... Lütfen talebinizi buraya yazın.')" 
+                        class="w-full text-left bg-slate-700 hover:bg-slate-600 p-4 rounded-lg font-semibold text-white transition flex items-center gap-3">
+                    <i class="fas fa-question text-slate-400 text-lg"></i> Diğer Konular ve İade Talebi
+                </button>
+            </div>
+            <p class="text-xs text-slate-500 mt-6 text-center">Tüm destek talepleri Telegram üzerinden hızlıca yanıtlanır.</p>
+        </div>
+    </div>
+    <header class="header-bg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
+            <a href="index.html" class="text-3xl tracking-tighter flex items-center gap-2">
+                <i class="fas fa-terminal text-red-500"></i>
+                <span class="font-black" style="background: linear-gradient(135deg, #f87171 0%, #3b82f6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">RexvStore</span>
+            </a>
+            <button id="logout-btn" class="text-sm font-semibold text-slate-400 hover:text-red-500 transition">
+                <i class="fas fa-sign-out-alt mr-1"></i> Çıkış Yap
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 border-b border-slate-700 pb-4">
+             <h1 class="text-4xl font-extrabold text-white flex items-center gap-3">
+                <i class="fas fa-box-open text-blue-500"></i> Sipariş Takibi
+            </h1>
+            <p id="user-info" class="text-slate-400 mt-2 md:mt-0 text-sm italic">
+                Oturum Açık: <span id="user-email-display">Yükleniyor...</span>
+            </p>
+        </div>
+
+        <div id="orders-container" class="space-y-6">
+            <div id="loading-spinner" class="text-center py-20">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
+                <p class="mt-4 text-slate-400 font-medium">Siparişleriniz Yükleniyor...</p>
+            </div>
+            
+            <div id="no-orders" class="text-center py-20 hidden">
+                <i class="fas fa-shopping-basket text-7xl mb-4 text-slate-700"></i>
+                <p class="text-xl font-semibold text-slate-400">Henüz tamamlanmış bir siparişiniz bulunmamaktadır.</p>
+                <a href="index.html#products" class="mt-6 inline-block bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg transition">
+                    Hizmetleri Keşfet
+                </a>
+            </div>
+        </div>
+        
+        <div class="mt-16 p-8 bg-slate-800 rounded-xl border border-red-500/50 shadow-2xl shadow-red-900/40">
+            <div class="flex items-center mb-4">
+                <i class="fas fa-headset text-3xl text-red-400 mr-3"></i>
+                <h2 class="text-2xl font-bold text-white">Siparişinizle İlgili Sorun mu Yaşıyorsunuz?</h2>
+            </div>
+            <p class="text-slate-400 mb-6">
+                Teslimat, kurulum veya hatalı ürün sorunları için anında destek alabilirsiniz.
+            </p>
+            <button onclick="openSupportModal()" class="inline-flex items-center bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition shadow-lg shadow-red-600/30">
+                <i class="fab fa-telegram-plane mr-2"></i> Destek Talebi Oluştur
+            </button>
+        </div>
+
+    </main>
+
+    <footer class="bg-slate-900 mt-12 hidden md:block">
+        <div class="max-w-7xl mx-auto px-4 py-6 text-center text-sm text-slate-500 border-t border-slate-800">
+            RexvStore Dijital Çözümler &copy; 2025 - <a href="index.html" class="hover:text-blue-500">Ana Sayfa</a>
+        </div>
+    </footer>
+    
+    <div id="bottom-nav" class="fixed bottom-0 left-0 z-50 w-full bg-slate-900 border-t border-red-500/30 md:hidden">
+        <div class="grid grid-cols-2 h-full max-w-lg mx-auto font-medium" id="bottom-nav-inner">
+            
+            <a href="index.html" class="inline-flex flex-col items-center justify-center h-14 group hover:bg-slate-800 transition duration-150">
+                <i class="fas fa-home text-xl text-blue-400 group-hover:text-blue-500 transition"></i>
+                <span class="text-xs text-slate-300 group-hover:text-white mt-0.5">Ana Sayfa</span>
+            </a>
+            
+            <a href="siparislerim.html" class="inline-flex flex-col items-center justify-center h-14 group hover:bg-slate-800 transition duration-150 border-l border-slate-700">
+                <i class="fas fa-box-open text-xl text-red-400 group-hover:text-red-500 transition"></i>
+                <span class="text-xs text-slate-300 group-hover:text-white mt-0.5">Siparişlerim</span>
+            </a>
+            
+        </div>
+    </div>
+
+
+    <script type="module">
+        // Firebase Modülleri
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+        import { getFirestore, collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+        
+        // 🚨🚨🚨 BURAYI KENDİ FIREBASE AYARLARINIZLA DOLDURUN 🚨🚨🚨
+        const firebaseConfig = {
+            apiKey: "AIzaSyCR5mseCZP5tWLxzJHMewUTx3ipwIZgNoM", 
+            authDomain: "rexvstore.firebaseapp.com",
+            projectId: "rexvstore",
+            storageBucket: "rexvstore.appspot.com", 
+            messagingSenderId: "732705231158",
+            appId: "1:732705231158:web:ba5ad9c627dcb8ea6ae397",
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        const ordersContainer = document.getElementById('orders-container');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const noOrdersMessage = document.getElementById('no-orders');
+        const userEmailDisplay = document.getElementById('user-email-display');
+        const logoutBtn = document.getElementById('logout-btn');
+        const supportModal = document.getElementById('support-modal'); // 🔥 Yeni modal değişkeni
+        
+        let currentUserUid = null;
+
+        // --- ÇIKIŞ YAPMA İŞLEMİ ---
+        logoutBtn.addEventListener('click', () => {
+             signOut(auth).then(() => {
+                 Swal.fire({
+                     icon: 'info',
+                     title: 'Çıkış Yapıldı',
+                     text: 'Ana sayfaya yönlendiriliyorsunuz.',
+                     showConfirmButton: false,
+                     timer: 1500
+                 });
+                 setTimeout(() => {
+                     // ORİJİNAL LİNK: index.html
+                     window.location.href = 'index.html'; 
+                 }, 1500);
+             }).catch((error) => {
+                 console.error("Çıkış hatası:", error);
+                 Swal.fire('Hata', 'Çıkış işlemi sırasında bir sorun oluştu.', 'error');
+             });
+        });
+
+        // --- AUTH KONTROLÜ VE BAŞLATMA ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // Kullanıcı Giriş Yapmış
+                currentUserUid = user.uid;
+                userEmailDisplay.innerHTML = `<i class="fas fa-check-circle text-green-500"></i> ${user.email || 'Bilinmiyor'}`;
+                fetchUserOrders(currentUserUid);
+                highlightActiveNav(); 
+            } else {
+                // Kullanıcı Giriş Yapmamışsa login sayfasına yönlendir (Kritik Kontrol)
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Giriş Gerekli',
+                    text: 'Siparişlerinizi görmek için lütfen giriş yapın.',
+                    confirmButtonText: 'Giriş Sayfasına Git',
+                    allowOutsideClick: false
+                }).then(() => {
+                    // ORİJİNAL LİNK: index.html
+                    window.location.href = 'index.html'; 
+                });
+            }
+        });
+
+        // --- SİPARİŞLERİ FIREBASE'DEN ÇEKME ---
+        function fetchUserOrders(uid) {
+            // Firestore Collection adınızın 'orders' olduğundan emin olun.
+            const ordersRef = collection(db, 'orders'); 
+            
+            // 💡 Kritik Düzeltme: Siparişleri 'userId' alanına göre filtreliyoruz
+            const userOrdersQuery = query(ordersRef, where("userId", "==", uid));
+            
+            // Gerçek zamanlı dinleyici (Realtime Listener)
+            onSnapshot(userOrdersQuery, (snapshot) => {
+                loadingSpinner.style.display = 'none';
+                
+                const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                if (orders.length === 0) {
+                    ordersContainer.innerHTML = ''; 
+                    noOrdersMessage.style.display = 'block';
+                    ordersContainer.appendChild(noOrdersMessage);
+                } else {
+                    noOrdersMessage.style.display = 'none';
+                    renderOrders(orders);
+                }
+            }, (error) => {
+                console.error("Siparişleri çekerken hata:", error);
+                loadingSpinner.innerHTML = '<p class="text-red-500 font-medium"><i class="fas fa-exclamation-triangle mr-2"></i> Siparişler yüklenemedi. Yetkilendirme (Security Rules) veya Network hatası olabilir.</p>';
+            });
+        }
+
+        // --- SİPARİŞLERİ RENDER ETME ---
+        function renderOrders(orders) {
+            ordersContainer.innerHTML = '';
+            
+            // Tarihe göre sıralama (en yeni sipariş en üstte)
+            orders.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+            orders.forEach(order => {
+                // Sipariş durumuna göre sınıflandırma
+                let statusClass, statusIcon, statusText;
+                let normalizedStatus = order.status ? order.status.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() : 'beklemede';
+                
+                if (normalizedStatus.includes('teslim')) {
+                    statusClass = 'status-TeslimEdildi';
+                    statusIcon = 'fas fa-check-circle';
+                    statusText = 'Teslim Edildi';
+                } else if (normalizedStatus.includes('beklemede') || normalizedStatus.includes('bildirildi')) {
+                    statusClass = 'status-Beklemede';
+                    statusIcon = 'fas fa-clock';
+                    statusText = 'Ödeme Bekleniyor';
+                } else if (normalizedStatus.includes('islemde')) {
+                    statusClass = 'status-Islemde';
+                    statusIcon = 'fas fa-cogs';
+                    statusText = 'İşlemde';
+                } else {
+                    statusClass = 'status-IptalEdildi';
+                    statusIcon = 'fas fa-times-circle';
+                    statusText = 'İptal/Hata';
+                }
+                
+                // order.deliveryLink alan adının doğru olduğunu varsayıyoruz
+                const downloadButton = (normalizedStatus.includes('teslim') && order.deliveryLink)
+                    ? `<a href="${order.deliveryLink}" target="_blank" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-lg transition shadow-lg shadow-blue-600/30">
+                        <i class="fas fa-download mr-2"></i> Ürünü İndir
+                       </a>`
+                    : `<button disabled class="w-full md:w-auto bg-slate-700 text-slate-400 font-bold py-2.5 px-6 rounded-lg">
+                        <i class="fas fa-hourglass-half mr-2"></i> Teslimat Bekleniyor...
+                       </button>`;
+
+                // 🔥 YENİ EKLENEN: YÖNETİCİ NOTU GÖSTERİMİ
+                const adminNote = order.adminNote || order.note; // Yönetici notu alanı
+                const noteHtml = adminNote ? `
+                    <div class="p-3 mt-4 bg-red-800/40 border border-red-700/50 rounded-lg text-sm text-red-300">
+                        <p class="font-bold mb-1"><i class="fas fa-comment-dots mr-2"></i> Yöneticiden Not:</p>
+                        <p>${adminNote}</p>
+                    </div>
+                ` : '';
+                
+                // 💡 Kritik Düzeltme: createdAt alanını kullanıyoruz
+                const timestamp = order.createdAt;
+                const date = timestamp ? new Date(timestamp.seconds * 1000).toLocaleDateString('tr-TR', { 
+                    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+                }) : 'Bilinmiyor';
+
+                // 💡 Kritik Düzeltme: Ürün listesi için 'items' alanını kullanıyoruz
+                const productListHtml = (order.items || []).map(p => `
+                    <li class="flex justify-between text-sm text-slate-400 border-b border-slate-700/50 py-1 last:border-b-0">
+                        <span>${p.quantity || p.qty}x ${p.productName || 'Ürün Adı Yok'}</span>
+                        <span class="font-medium">${(p.finalPrice || 0).toLocaleString('tr-TR')} TL</span>
+                    </li>
+                `).join('');
+
+                const orderHtml = `
+                <div class="order-card p-5 rounded-xl flex flex-col justify-between gap-5">
+                    
+                    <div class="flex flex-col lg:flex-row justify-between lg:items-center space-y-3 lg:space-y-0">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:gap-6">
+                            <h3 class="text-xl font-bold text-white mb-1">Sipariş No: <span class="text-red-400 font-extrabold">${order.id.substring(0, 8).toUpperCase()}</span></h3>
+                            <span class="text-xs font-bold text-white px-3 py-1 rounded-full ${statusClass} flex items-center mt-1 sm:mt-0">
+                                <i class="${statusIcon} mr-2"></i> ${statusText}
+                            </span>
+                        </div>
+                        
+                        <div class="lg:text-right">
+                           <p class="text-sm text-slate-400">Tarih: ${date}</p>
+                           <p class="text-lg font-bold text-white">Toplam Tutar: <span class="text-red-500">${(order.totalTL || 0).toLocaleString('tr-TR')} TL</span></p>
+                        </div>
+                    </div>
+
+                    ${noteHtml} <div class="w-full border-t border-slate-700 pt-4 flex flex-col md:flex-row justify-between items-center gap-4">
+                        <button onclick="toggleDetails('${order.id}')" class="text-sm text-blue-400 hover:underline font-semibold flex items-center transition w-full md:w-auto justify-center md:justify-start">
+                            <i class="fas fa-chevron-down mr-2"></i> Detayları Göster
+                        </button>
+                        ${downloadButton}
+                    </div>
+                    
+                    <div id="details-${order.id}" class="w-full pt-4 mt-2 border-t border-slate-700 hidden bg-slate-700/50 p-4 rounded-lg">
+                        <h4 class="font-bold text-white mb-2 border-b border-slate-600 pb-1">Sipariş Edilen Ürünler:</h4>
+                        <ul class="space-y-2">
+                            ${productListHtml}
+                        </ul>
+                        <p class="text-xs text-slate-500 mt-4 pt-3 border-t border-slate-600">Ödeme Yöntemi: ${order.paymentMethod || 'Bilinmiyor'} | Sipariş bilgileri ve tam döküm e-posta adresinize gönderildi.</p>
+                    </div>
+
+                </div>`;
+                
+                ordersContainer.innerHTML += orderHtml;
+            });
+        }
+        
+        // --- DESTEK MODAL FONKSİYONLARI ---
+        window.openSupportModal = () => {
+            supportModal.classList.add('active');
+        }
+        window.closeSupportModal = () => {
+            supportModal.classList.remove('active');
+        }
+
+        window.openTelegramWithQuery = (subject, defaultMessage) => {
+            // Telegram Destek Kullanıcı Adınızı buraya ekleyin
+            const telegramUsername = 'rexvstore_destek'; 
+            
+            // Kullanıcının sipariş numarasını girmesini kolaylaştırmak için
+            const queryText = encodeURIComponent(`[${subject}]\n${defaultMessage}`);
+            const url = `https://t.me/${telegramUsername}?text=${queryText}`;
+            
+            // Modalı kapat ve Telegram'a yönlendir
+            closeSupportModal();
+            window.open(url, '_blank');
+        };
+        
+        // Detayları Aç/Kapat Fonksiyonu
+        window.toggleDetails = (orderId) => {
+            const detailsDiv = document.getElementById(`details-${orderId}`);
+            const button = document.querySelector(`button[onclick="toggleDetails('${orderId}')"]`);
+            
+            detailsDiv.classList.toggle('hidden');
+            if (detailsDiv.classList.contains('hidden')) {
+                 button.innerHTML = '<i class="fas fa-chevron-down mr-2"></i> Detayları Göster';
+            } else {
+                 button.innerHTML = '<i class="fas fa-chevron-up mr-2"></i> Detayları Gizle';
+            }
+        };
+        
+        // --- ALT MENÜ VURGULAMA İŞLEVİ ---
+        function highlightActiveNav() {
+             const navItems = document.querySelectorAll('#bottom-nav a');
+             navItems.forEach(item => {
+                 const itemPath = item.getAttribute('href').split('/').pop(); 
+                 // ORİJİNAL LİNK KONTROLÜ
+                 if (itemPath === 'siparislerim.html') { 
+                     const icon = item.querySelector('i');
+                     const span = item.querySelector('span');
+                     
+                     icon.classList.remove('text-red-400');
+                     icon.classList.add('text-red-500'); 
+                     span.classList.add('text-white', 'font-semibold');
+                     item.classList.add('bg-slate-800');
+                 }
+             });
+        }
+
+    </script>
+</body>
+</html>
