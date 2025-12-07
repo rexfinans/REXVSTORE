@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RexvStore - Siber Güvenlik ve Anonim Yazılım Çözümleri</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        /* --- Temel Ayarlar (Koyu Tema) --- */
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; scroll-behavior: smooth; color: #f1f5f9; }
+        
+        /* --- Logo Animasyonu --- */
+        .logo-text {
+            background: linear-gradient(135deg, #f87171 0%, #3b82f6 100%); 
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 900;
+            letter-spacing: -1px;
+            transition: all 0.3s;
+        }
+
+        /* --- Hero Slider --- */
+        .hero-slide { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0; transition: opacity 1.5s ease-in-out; z-index: 1; }
+        .hero-slide.active { opacity: 1; }
+        .hero-overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.9); z-index: 2; }
+
+        /* --- Ürün Kartları --- */
+        .product-card { transition: transform 0.3s ease, box-shadow 0.3s ease; border: 1px solid #1e293b; background-color: #1e293b; }
+        .product-card:hover { transform: translateY(-8px); box-shadow: 0 20px 30px rgba(0, 0, 0, 0.5); border-color: #3b82f6; }
+
+        /* --- Kategori Butonları --- */
+        .category-btn { transition: all 0.2s; background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+        .category-btn:hover { background-color: #334155; color: #fff; }
+        .category-btn.active { background-color: #3b82f6; color: white; border-color: #3b82f6; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.5); }
+
+        /* --- Canlı Destek Butonu --- */
+        #live-support-btn {
+            position: fixed; bottom: 20px; right: 20px; z-index: 1000;
+            background: linear-gradient(135deg, #0088cc, #005f8f); 
+            color: white; width: 50px; height: 50px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 5px 15px rgba(0, 136, 204, 0.5); 
+            cursor: pointer; transition: transform 0.3s;
+            animation: pulse-blue 2s infinite;
+        }
+        #live-support-btn i { font-size: 1.5rem; } 
+        
+        /* --- Marquee/Duyuru Bandı --- */
+        .marquee-container { overflow: hidden; white-space: nowrap; background: #3b82f6; color: #fff; font-size: 0.8rem; padding: 6px 0; display: none; /* JS ile kontrol edilecek */ }
+        .marquee-content { display: inline-block; animation: marquee 25s linear infinite; }
+        
+        @keyframes marquee {
+            0%   { transform: translate(100%, 0); }
+            100% { transform: translate(-100%, 0); }
+        }
+
+        /* --- Modal (Sepet & QuickView) --- */
+        .custom-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: all 0.3s; }
+        .custom-modal.active { opacity: 1; visibility: visible; }
+        .modal-box {
+            background: #1e293b; 
+            max-width: 900px;
+            width: 95%; 
+            max-height: 90vh; 
+            overflow: hidden; 
+            border-radius: 16px; 
+            transform: scale(0.9); 
+            transition: transform 0.3s; 
+            border: 1px solid #334155;
+        }
+        .custom-modal.active .modal-box { transform: scale(1); }
+        
+        /* QuickView Swiper Stilleri */
+        .qv-swiper-main .swiper-button-next, .qv-swiper-main .swiper-button-prev { color: #fff; background-color: rgba(0, 0, 0, 0.5); border-radius: 50%; width: 35px; height: 35px; }
+        .qv-swiper-main .swiper-button-next::after, .qv-swiper-main .swiper-button-prev::after { font-size: 1rem; font-weight: bold; }
+
+        /* --- SweetAlert Z-Index Düzeltmesi --- */
+        .swal2-container.swal2-container-top {
+            z-index: 999999 !important; 
+        }
+
+        /* --- MOBİL ALT MENÜ STİLLERİ --- */
+        @media (max-width: 767px) {
+            body {
+                padding-bottom: 56px; /* Alt menü yüksekliği kadar boşluk bırakır */
+            }
+            #bottom-nav {
+                height: 56px; /* Daha küçük yükseklik */
+            }
+            #bottom-nav a {
+                padding: 0 5px;
+            }
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <div class="marquee-container shadow-xl sticky top-0 z-50" id="announcement-bar">
+        <div class="marquee-content" id="announcement-text"></div>
+    </div>
+    <header class="bg-slate-900/95 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
+            <a href="#" class="text-3xl tracking-tighter flex items-center gap-2">
+                <i class="fas fa-terminal text-red-500"></i>
+                <span class="logo-text">RexvStore</span>
+            </a>
+
+            <nav class="hidden md:flex space-x-8 font-medium text-slate-300">
+                <a href="#products" class="hover:text-blue-500 transition">Çözümlerimiz</a>
+                <a href="#features" class="hover:text-blue-500 transition">Güvenceler</a>
+                <a href="#testimonials" class="hover:text-blue-500 transition">Referanslar</a>
+                <a href="#faq" class="hover:text-blue-500 transition">Destek & SSS</a>
+            </nav>
+
+            <div class="flex items-center gap-4">
+                
+                <div id="auth-menu-desktop" class="hidden md:flex items-center gap-3">
+                    </div>
+
+                <button onclick="openCart()" class="relative group">
+                    <div class="p-2 bg-slate-800 rounded-full group-hover:bg-blue-500 transition text-slate-300 group-hover:text-white">
+                        <i class="fas fa-shopping-cart text-lg"></i>
+                    </div>
+                    <span id="cart-badge" class="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold w-4 h-4 flex items-center justify-center rounded-full shadow-sm">0</span>
+                </button>
+                <button onclick="toggleMobileMenu()" class="md:hidden text-2xl text-slate-300"><i class="fas fa-bars"></i></button>
+            </div>
+        </div>
+    </header>
+
+    <div id="mobile-menu" class="fixed inset-0 bg-slate-900/95 z-40 flex flex-col pt-20 px-8 space-y-6 text-xl text-white transform translate-x-full transition-transform duration-300">
+        <button onclick="toggleMobileMenu()" class="absolute top-4 right-4 text-4xl text-gray-400 hover:text-white">&times;</button>
+        <div id="mobile-auth-links">
+             </div>
+        <a href="#products" onclick="toggleMobileMenu()" class="py-3 border-b border-slate-700 hover:text-blue-500"><i class="fas fa-cubes mr-3"></i>Çözümlerimiz</a>
+        <a href="#features" onclick="toggleMobileMenu()" class="py-3 border-b border-slate-700 hover:text-blue-500"><i class="fas fa-lock mr-3"></i>Güvenceler</a>
+        <a href="#testimonials" onclick="toggleMobileMenu()" class="py-3 border-b border-slate-700 hover:text-blue-500"><i class="fas fa-comment-dots mr-3"></i>Referanslar</a>
+        <a href="#faq" onclick="toggleMobileMenu()" class="py-3 border-b border-slate-700 hover:text-blue-500"><i class="fas fa-question-circle mr-3"></i>Destek & SSS</a>
+        <a href="#contact" onclick="toggleMobileMenu()" class="py-3 hover:text-blue-500"><i class="fas fa-envelope mr-3"></i>İletişim</a>
+        </div>
+
+    <section class="relative h-[650px] flex items-center justify-center text-center text-white overflow-hidden bg-slate-900">
+        <div id="hero-slider" class="absolute inset-0"></div>
+        <div class="hero-overlay"></div>
+        
+        <div class="relative z-10 max-w-5xl px-4">
+            <h1 class="text-4xl md:text-6xl font-black mb-6 leading-tight">
+                Dijital Varlığınızın <span class="text-yellow-400">Mutlak Güvenliği</span> <br> Özel Yazılım Çözümleriyle RexvStore'da.
+            </h1>
+            <p class="text-lg md:text-xl text-slate-400 mb-10 max-w-3xl mx-auto">
+                Gizliliğinizden ödün vermeden, iş süreçlerinizi otomatikleştirecek ve siber güvenliğinizi sağlayacak çözümler sunuyoruz.
+            </p>
+            <div class="flex flex-col sm:flex-row justify-center gap-4">
+                <a href="#products" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-10 rounded-xl shadow-lg shadow-blue-600/30 transition transform hover:-translate-y-1">
+                    Uzman Çözümleri Keşfet <i class="fas fa-chevron-right ml-2"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-10 bg-slate-900 border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4">
+            <div id="category-filters" class="flex flex-wrap justify-center gap-3">
+                </div>
+        </div>
+    </section>
+
+    <section id="products" class="py-16 bg-slate-900">
+        <div class="max-w-7xl mx-auto px-4">
+            <h2 class="text-3xl md:text-4xl font-extrabold text-white mb-10 border-l-4 border-blue-600 pl-4">Öne Çıkan Hizmetlerimiz</h2>
+
+            <div id="loading-spinner" class="text-center py-20">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
+                <p class="mt-4 text-slate-400 font-medium">Uzman Çözümler Yükleniyor...</p>
+            </div>
+
+            <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                </div>
+        </div>
+    </section>
+
+    <section id="features" class="py-20 bg-slate-800 border-t border-b border-slate-700">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h2 class="text-3xl font-bold text-white mb-4"><i class="fas fa-handshake mr-2 text-red-400"></i> Dört Temel Güvencemiz</h2>
+                <p class="text-slate-400">RexvStore, dijital projelerinizde tam güvenlik ve şeffaflık taahhüt eder.</p>
+            </div>
+            
+            <div class="grid md:grid-cols-4 gap-8">
+                <div class="p-6 rounded-xl bg-slate-700 border border-slate-600 text-center hover:shadow-2xl hover:border-blue-500 transition">
+                    <i class="fas fa-user-secret text-4xl text-blue-400 mb-4"></i>
+                    <h3 class="font-bold text-white mb-1">Maksimum Gizlilik</h3>
+                    <p class="text-slate-400 text-sm">Veri ve kimlikleriniz için %100 anonimlik ve şifreleme.</p>
+                </div>
+                <div class="p-6 rounded-xl bg-slate-700 border border-slate-600 text-center hover:shadow-2xl hover:border-red-500 transition">
+                    <i class="fas fa-money-bill-transfer text-4xl text-red-400 mb-4"></i>
+                    <h3 class="font-bold text-white mb-1">Koşulsuz İade</h3>
+                    <p class="text-slate-400 text-sm">Yazılım çalışmazsa paranız anında iade edilir.</p>
+                </div>
+                <div class="p-6 rounded-xl bg-slate-700 border border-slate-600 text-center hover:shadow-2xl hover:border-green-500 transition">
+                    <i class="fas fa-shield-virus text-4xl text-green-400 mb-4"></i>
+                    <h3 class="font-bold text-white mb-1">Ömür Boyu Güncelleme</h3>
+                    <p class="text-slate-400 text-sm">Kritik güvenlik ve hata güncellemeleri ücretsizdir.</p>
+                </div>
+                 <div class="p-6 rounded-xl bg-slate-700 border border-slate-600 text-center hover:shadow-2xl hover:border-yellow-500 transition">
+                    <i class="fas fa-code-branch text-4xl text-yellow-400 mb-4"></i>
+                    <h3 class="font-bold text-white mb-1">Özel Proje Desteği</h3>
+                    <p class="text-slate-400 text-sm">Proje başlangıcından teslime kadar 7/24 uzman danışmanlık.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="testimonials" class="py-20 bg-slate-900">
+        <div class="max-w-7xl mx-auto px-4">
+            <h2 class="text-3xl font-bold text-center mb-12 text-white"><i class="fas fa-comments text-blue-500 mr-2"></i> Müşteri Referansları</h2>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl">
+                    <div class="flex items-center gap-1 text-yellow-400 mb-4 text-sm"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                    <p class="text-slate-300 mb-6 italic">"Finansal botta inanılmaz bir hız yakaladık. Gizlilik konusunda verdikleri sözün arkasındalar. Tek kelimeyle profesyonel."</p>
+                    <p class="font-bold text-white text-sm">Kadir T. <span class="text-xs text-slate-500 ml-2">| Finansal Otomasyon</span></p>
+                </div>
+                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl">
+                    <div class="flex items-center gap-1 text-yellow-400 mb-4 text-sm"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i></div>
+                    <p class="text-slate-300 mb-6 italic">"Ağ penetrasyon testinde buldukları kritik açık, bizi büyük bir felaketten korudu. Güvenilir ve dürüst hizmet."</p>
+                    <p class="font-bold text-white text-sm">Deniz E. <span class="text-xs text-slate-500 ml-2">| Siber Güvenlik Analisti</span></p>
+                </div>
+                 <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl">
+                    <div class="flex items-center gap-1 text-yellow-400 mb-4 text-sm"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                    <p class="text-slate-300 mb-6 italic">"Özel bir veri toplama botu talebimiz vardı. RexvStore, hem hızlı hem de tam istediğimiz gibi anonim çalışan bir çözüm sundu. Mükemmel bir iş ortaklığı."</p>
+                    <p class="font-bold text-white text-sm">Can B. <span class="text-xs text-slate-500 ml-2">| Veri Otomasyonu Projesi</span></p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="faq" class="py-20 bg-slate-800 border-t border-slate-700">
+        <div class="max-w-3xl mx-auto px-4">
+            <h2 class="text-3xl font-bold text-center mb-10 text-white"><i class="fas fa-circle-question mr-2 text-blue-500"></i> Destek Merkezi & SSS</h2>
+            <div id="faq-container" class="space-y-4">
+                </div>
+        </div>
+    </section>
+    
+    <section class="py-8 bg-slate-900 border-t border-slate-700">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-lg font-semibold text-slate-400 mb-6">Güvenle İşlem Yapabileceğiniz Ödeme Ortaklıklarımız</p>
+            <div class="flex justify-center items-center flex-wrap gap-8 opacity-70">
+                <i class="fab fa-cc-visa text-5xl text-blue-500"></i>
+                <i class="fab fa-cc-mastercard text-5xl text-red-500"></i>
+                <i class="fas fa-bitcoin text-5xl text-yellow-500"></i>
+                <i class="fas fa-globe text-5xl text-green-500"></i>
+                <i class="fab fa-paypal text-5xl text-indigo-500"></i>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-slate-900 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 py-8 flex flex-col md:flex-row justify-between items-center gap-4 border-t border-slate-800">
+            <div class="text-center md:text-left">
+                <span class="font-bold text-xl text-white">RexvStore</span>
+                <p class="text-sm text-slate-500 mt-1">Dijital güvenliğin ve gizliliğin adresi. &copy; 2025</p>
+            </div>
+            <div class="flex gap-6 text-sm text-slate-400 font-medium">
+                <a href="#" class="hover:text-blue-500">Gizlilik Politikası</a>
+                <a href="#" class="hover:text-blue-500">Kullanım Şartları</a>
+                <a href="#" class="hover:text-blue-500">Hizmet Sözleşmesi</a>
+                <a href="#contact" class="hover:text-blue-500">İletişim</a>
+            </div>
+        </div>
+    </footer>
+
+    <a href="https://t.me/rexfinans" target="_blank" id="live-support-btn" title="Canlı Destek Telegram">
+        <i class="fab fa-telegram-plane"></i>
+    </a>
+
+    <div id="cart-modal" class="custom-modal">
+        <div class="modal-box p-6 relative">
+            <button onclick="closeCart()" class="absolute top-4 right-4 text-slate-400 hover:text-red-600 text-2xl">&times;</button>
+            <h3 class="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <i class="fas fa-shopping-basket text-blue-500"></i> Sepetiniz
+            </h3>
+            
+            <div id="cart-items" class="space-y-4 mb-6 max-h-[400px] overflow-y-auto">
+                <div class="text-center text-slate-500 py-10">Sepetiniz şu an boş.</div>
+            </div>
+
+            <div class="border-t border-slate-700 pt-4">
+                <div class="flex justify-between text-lg font-bold text-white mb-6">
+                    <span>Toplam Tutar:</span>
+                    <span id="cart-total-price" class="text-red-500">0 TL</span>
+                </div>
+                <button onclick="checkout()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-red-600/30">
+                    Satın Alma Sayfasına Git <i class="fas fa-lock ml-2"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="qv-modal" class="custom-modal">
+        <div class="modal-box p-0 relative overflow-hidden flex flex-col md:flex-row">
+            <button onclick="closeQuickView()" class="absolute top-4 right-4 text-slate-400 hover:text-red-600 z-50 text-3xl bg-slate-800 rounded-full w-10 h-10 flex items-center justify-center shadow-md border border-slate-700">&times;</button>
+            
+            <div class="w-full md:w-1/2 bg-slate-800 relative p-4 flex-shrink-0">
+                <div class="swiper qv-swiper-main">
+                    <div class="swiper-wrapper" id="qv-image-slides">
+                        </div>
+                    <div class="swiper-button-next"></div>
+                    <div class="swiper-button-prev"></div>
+                </div>
+            </div>
+            
+            <div class="w-full md:w-1/2 p-8 flex flex-col max-h-[90vh] overflow-y-auto">
+                
+                <div class="flex-grow">
+                    <span id="qv-category" class="text-sm font-bold text-blue-500 mb-2">Kategori</span>
+                    <h3 id="qv-title" class="text-3xl font-bold text-white mb-4">Ürün Adı</h3>
+                    <p id="qv-desc" class="text-slate-400 mb-6 text-sm whitespace-pre-wrap"></p>
+                </div>
+                
+                <div class="mt-auto pt-4 border-t border-slate-700 flex-shrink-0">
+                    <div class="text-3xl font-bold text-red-500 mb-6" id="qv-price">0 TL</div>
+                    <button id="qv-add-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition shadow-md">
+                        Sepete Ekle
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+<script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, doc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"; 
+    
+    // 🔥 FIREBASE AYARLARI
+    const firebaseConfig = {
+        apiKey: "AIzaSyCR5mseCZP5tWLxzJHMewUTx3ipwIZgNoM",
+        authDomain: "rexvstore.firebaseapp.com",
+        projectId: "rexvstore",
+        storageBucket: "rexvstore.firebasestorage.app",
+        messagingSenderId: "732705231158",
+        appId: "1:732705231158:web:ba5ad9c627dcb8ea6ae397",
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const APP_ID_PATH = 'rexvstore-main'; 
+    const PUBLIC_DATA_ROOT = `artifacts/${APP_ID_PATH}/public/data`;
+
+    // GLOBAL DEĞİŞKENLER
+    let products = [];
+    let categories = {};
+    let cart = JSON.parse(localStorage.getItem('rexv_cart')) || [];
+    let quickViewSwiper = null; 
+    let currentUser = null; // Giriş yapan kullanıcı bilgisi
+
+    // BAŞLATMA
+    async function init() {
+        try {
+            // Kullanıcı oturum durumunu dinlemeye başla
+            onAuthStateChanged(auth, (user) => {
+                currentUser = user;
+                updateAuthUI(user);
+            });
+            
+            // 🔥 KRİTİK DÜZELTME: checkLoginForOrders'ı buraya taşıdık ve global yaptık
+            // Bu sayede modül kapsamındaki 'currentUser' değişkenini doğru okuyabilir.
+            window.checkLoginForOrders = (e) => {
+                e.preventDefault(); // Varsayılan a tagı yönlendirmesini durdur
+
+                if (currentUser) {
+    // Giriş yapmışsa doğrudan uzantısız siparislerim adresine yönlendir.
+    window.location.href = 'destek';
+                } else {
+                    // Giriş yapmamışsa uyarı ver ve login sayfasına yönlendir
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Giriş Gerekli',
+                        text: 'Siparişlerinizi görüntülemek için lütfen giriş yapın veya kayıt olun.',
+                        confirmButtonText: 'Giriş Yap',
+                        showCancelButton: true,
+                        cancelButtonText: 'İptal',
+                        customClass: { container: 'swal2-container-top' }
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                             window.location.href = 'login';
+                        }
+                    });
+                }
+            }
+
+
+            startListeners();
+            updateCartUI();
+            highlightActiveNav(); // Alt menü vurgulamasını çalıştır
+            console.log("Firebase Başlatma Başarılı.");
+        } catch (error) {
+            console.error("Bağlantı Hatası:", error);
+            document.getElementById('loading-spinner').innerHTML = '<p class="text-red-500">Veri yüklenemedi. Firebase ayarlarını kontrol edin.</p>';
+        }
+    }
+    
+    // --- KULLANICI ARAYÜZÜNÜ GÜNCELLEME ---
+    function updateAuthUI(user) {
+        const mobileAuthLinks = document.getElementById('mobile-auth-links');
+        const desktopAuthMenu = document.getElementById('auth-menu-desktop');
+        
+        mobileAuthLinks.innerHTML = '';
+        desktopAuthMenu.innerHTML = '';
+
+        if (user) {
+            // Giriş Yapmış Kullanıcı (Desktop)
+            desktopAuthMenu.innerHTML = `
+                <button onclick="logoutUser()" class="p-2 bg-slate-800 rounded-full hover:bg-red-500 transition text-slate-300 hover:text-white" title="Çıkış Yap">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            `;
+            
+            // Giriş Yapmış Kullanıcı (Mobil)
+            mobileAuthLinks.innerHTML = `
+                <p class="py-2 text-sm text-slate-400 border-b border-slate-700">Giriş Yapılan E-posta: ${user.email || 'Bilinmiyor'}</p>
+                <button onclick="logoutUser(); toggleMobileMenu();" class="w-full py-3 text-left border-b border-slate-700 text-red-400 hover:text-red-500"><i class="fas fa-sign-out-alt mr-3"></i> Çıkış Yap</button>
+            `;
+            
+        } else {
+            // Giriş Yapmamış Kullanıcı (Desktop)
+            desktopAuthMenu.innerHTML = `
+                <a href="login" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition shadow-md">
+                    <i class="fas fa-user-lock mr-2"></i> Giriş Yap / Kayıt Ol
+                </a>
+            `;
+            
+            // Giriş Yapmamış Kullanıcı (Mobil)
+            mobileAuthLinks.innerHTML = `
+                <a href="login" onclick="toggleMobileMenu()" class="py-3 border-b border-slate-700 text-red-400 hover:text-red-500"><i class="fas fa-user-lock mr-3"></i> Giriş Yap / Kayıt Ol</a>
+            `;
+        }
+    }
+
+    // --- ÇIKIŞ İŞLEMİ ---
+    window.logoutUser = async () => {
+        try {
+            await signOut(auth);
+            Swal.fire({
+                icon: 'success',
+                title: 'Oturum Kapatıldı',
+                text: 'Başarıyla çıkış yaptınız.',
+                showConfirmButton: false,
+                timer: 1500
+            });
+        } catch (error) {
+            console.error("Çıkış Hatası:", error);
+        }
+    };
+
+    function startListeners() {
+        // Kategorileri Dinleme
+        onSnapshot(collection(db, `${PUBLIC_DATA_ROOT}/categories`), (snap) => {
+            categories = {};
+            const catsArray = [];
+            snap.forEach(d => {
+                const data = d.data();
+                const name = data.name_tr || data.name || 'Kategori'; 
+                categories[d.id] = { id: d.id, name: name, ...data }; 
+                catsArray.push({ id: d.id, name: name, ...data });
+            });
+            renderCategoryButtons(catsArray);
+            renderProducts();
+        });
+
+        // Ürünleri Dinleme
+        onSnapshot(collection(db, `${PUBLIC_DATA_ROOT}/products`), (snap) => {
+            products = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            document.getElementById('loading-spinner').style.display = 'none';
+            renderProducts();
+        });
+
+        // 🔥 DUYURULARI DİNLEME DÜZELTİLMİŞ KISIM
+        // Duyuru verisi, "settings/app_config" belgesi içindeki "announcement" alanında tutulur.
+        onSnapshot(doc(db, `${PUBLIC_DATA_ROOT}/settings/app_config`), (snap) => {
+            if (snap.exists() && snap.data().announcement) {
+                renderAnnouncement(snap.data().announcement);
+            } else {
+                // Veri yoksa veya aktif değilse duyuruyu gizle
+                renderAnnouncement(null);
+            }
+        });
+        // 🔥 DUYURULARI DİNLEME DÜZELTİLMİŞ KISIM BİTİŞ
+
+        // Sabit SSS'leri Render Etme
+        renderFAQ([
+            {q: "Satın alma işlemi gizli ve güvenli mi?", a: "Evet. Tüm işlemler şifreli kanallar (SSL) üzerinden yürütülür ve müşteri verileri (KVKK gereği) en üst düzeyde anonim tutulur. Asla 3. partilerle paylaşılmaz."},
+            {q: "Yazılım kurulumu ve teknik destek ücretli mi?", a: "İlk kurulum ve kritik güvenlik güncellemeleri ücretsizdir. Satın alma sonrası Telegram üzerinden uzman teknik destek ekibimiz size yardımcı olacaktır."},
+            {q: "İade politikanız nedir? Koşulları nelerdir?", a: "Teslim edilen yazılımın, sözleşmede belirtilen temel fonksiyonları yerine getirmemesi durumunda 3 iş günü içinde %100 iade garantisi sunuyoruz. Proje kapsamı dışındaki talepler iade kapsamına girmez."},
+            {q: "Özel yazılım siparişi verebilir miyim?", a: "Elbette. Özel yazılım kategorisinden saatlik veya proje bazlı teklif alabilirsiniz. Telegram destek hattımız üzerinden projenizin detaylarını iletebilirsiniz."}
+        ]);
+    }
+    
+    // --- RENDER VE FİLTRE FONKSİYONLARI ---
+    function renderCategoryButtons(cats) {
+        const container = document.getElementById('category-filters');
+        container.innerHTML = `<button onclick="window.filterProducts(this, 'all')" class="category-btn active px-6 py-2 rounded-full font-medium transition">Tümü</button>`;
+        
+        cats.sort((a,b) => (a.order || 99) - (b.order || 99)).forEach(c => {
+            const btn = document.createElement('button');
+            btn.className = 'category-btn px-6 py-2 rounded-full font-medium transition';
+            btn.textContent = c.name_tr || c.name;
+            btn.onclick = (e) => window.filterProducts(e.target, c.id);
+            container.appendChild(btn);
+        });
+    }
+
+    window.filterProducts = (button, catId) => {
+        document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+        button.classList.add('active');
+        renderProducts(catId);
+    };
+
+    function renderProducts(filterCatId = 'all') {
+        const grid = document.getElementById('product-grid');
+        grid.innerHTML = '';
+
+        const filtered = filterCatId === 'all' ? products : products.filter(p => p.category === filterCatId);
+
+        if (filtered.length === 0) {
+            grid.innerHTML = '<div class="col-span-full text-center text-slate-500 py-10">Seçilen kategoride ürün bulunamadı.</div>';
+            return;
+        }
+
+        filtered.forEach(p => {
+            const catInfo = categories[p.category] || { name_tr: 'Genel', icon: 'fas fa-cogs' };
+            const catName = catInfo.name_tr || catInfo.name;
+            
+            const price = p.discounted_price || p.price;
+            const priceDisplay = p.discounted_price && p.discounted_price < p.price 
+                ? `<span class="text-sm text-slate-500 line-through mr-2">${p.price} TL</span><span class="text-xl font-bold text-red-500">${price} TL</span>`
+                : `<span class="text-xl font-bold text-blue-500">${price} TL</span>`;
+
+            const imgUrl = (p.images && p.images[0]) ? p.images[0] : 'https://placehold.co/600x400/1e293b/94a3b8?text=Gorsel+Yok';
+
+            const html = `
+            <div class="product-card rounded-2xl overflow-hidden flex flex-col h-full">
+                <div class="h-48 overflow-hidden">
+                    <img src="${imgUrl}" class="w-full h-full object-cover">
+                </div>
+                <div class="p-5 flex flex-col flex-grow">
+                    <div class="text-xs font-bold text-blue-500 mb-1 uppercase tracking-wide flex items-center"><i class="${catInfo.icon} mr-2"></i> ${catName}</div>
+                    <h3 class="text-lg font-bold text-white mb-2 leading-tight">${p.name_tr}</h3>
+                    <p class="text-slate-400 text-sm mb-4 line-clamp-2 flex-grow">${p.short_desc || ''}</p>
+                    
+                    <div class="mt-auto pt-4 border-t border-slate-700">
+                        <div class="mb-4">${priceDisplay}</div>
+                        <div class="flex gap-2">
+                            <button onclick="window.openQuickView('${p.id}')" class="flex-grow bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 rounded-lg transition text-sm">
+                                İncele <i class="fas fa-search ml-1"></i>
+                            </button>
+                            <button onclick="window.addToCart('${p.id}')" class="w-1/2 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 rounded-lg transition text-sm">
+                                Sepete Ekle <i class="fas fa-cart-plus ml-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+            grid.innerHTML += html;
+        });
+    }
+
+    // --- SEPET İŞLEMLERİ (Giriş Kontrolü Eklendi) ---
+
+    window.addToCart = (id) => {
+        if (!currentUser) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Giriş Gerekli',
+                text: 'Alışverişe devam etmek için lütfen giriş yapın veya kayıt olun.',
+                confirmButtonText: 'Giriş Yap',
+                showCancelButton: true,
+                cancelButtonText: 'İptal',
+                customClass: { container: 'swal2-container-top' }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = 'login';
+                }
+            });
+            return;
+        }
+        
+        const product = products.find(p => p.id === id);
+        if (!product) return;
+
+        const existing = cart.find(item => item.id === id);
+        if (existing) { existing.qty++; } 
+        else {
+            cart.push({ 
+                id: product.id, name: product.name_tr, 
+                price: product.discounted_price || product.price, 
+                image: (product.images && product.images[0]) ? product.images[0] : 'https://placehold.co/100',
+                qty: 1 
+            });
+        }
+        saveCart();
+        updateCartUI();
+        
+        Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 1500 }).fire({ icon: 'success', title: 'Sepete Eklendi' });
+    };
+
+    window.removeFromCart = (id) => {
+        cart = cart.filter(c => c.id !== id);
+        saveCart();
+        updateCartUI();
+    };
+
+    function saveCart() { localStorage.setItem('rexv_cart', JSON.stringify(cart)); }
+
+    function updateCartUI() {
+        const badge = document.getElementById('cart-badge');
+        const list = document.getElementById('cart-items');
+        const totalEl = document.getElementById('cart-total-price');
+        
+        const totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
+        badge.innerText = totalQty;
+        badge.style.display = totalQty === 0 ? 'none' : 'flex';
+
+        if (cart.length === 0) {
+            list.innerHTML = '<div class="text-center text-slate-500 py-10 flex flex-col items-center"><i class="fas fa-shopping-cart text-4xl mb-3 text-slate-700"></i>Sepetiniz boş.</div>';
+            totalEl.innerText = '0 TL';
+        } else {
+            list.innerHTML = '';
+            let totalPrice = 0;
+            
+            cart.forEach(item => {
+                const itemTotal = item.price * item.qty;
+                totalPrice += itemTotal;
+                
+                list.innerHTML += `
+                <div class="flex items-center gap-3 p-3 bg-slate-700 rounded-lg">
+                    <img src="${item.image}" class="w-12 h-12 object-cover rounded-md">
+                    <div class="flex-grow">
+                        <h4 class="text-sm font-bold text-white line-clamp-1">${item.name}</h4>
+                        <div class="text-xs text-slate-400">${item.qty} x ${item.price} TL</div>
+                    </div>
+                    <div class="font-bold text-sm text-red-500">${itemTotal.toLocaleString('tr-TR')} TL</div>
+                    <button onclick="window.removeFromCart('${item.id}')" class="text-slate-500 hover:text-red-500 text-sm"><i class="fas fa-trash"></i></button>
+                </div>`;
+            });
+            totalEl.innerText = totalPrice.toLocaleString('tr-TR') + ' TL';
+        }
+    }
+
+    window.openCart = () => document.getElementById('cart-modal').classList.add('active');
+    window.closeCart = () => document.getElementById('cart-modal').classList.remove('active');
+    
+    // --- GÜNCELLENMİŞ CHECKOUT (SATIN AL) FONKSİYONU: GİRİŞ KONTROLÜ EKLENDİ ---
+    window.checkout = () => {
+        if (!currentUser) {
+             Swal.fire({
+                icon: 'warning',
+                title: 'Giriş Gerekli',
+                text: 'Satın alma sayfasına gitmek için lütfen giriş yapın veya kayıt olun.',
+                confirmButtonText: 'Giriş Yap',
+                showCancelButton: true,
+                cancelButtonText: 'İptal',
+                customClass: { container: 'swal2-container-top' }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = 'login';
+                }
+            });
+            return;
+        }
+        
+        if (cart.length === 0) { 
+            Swal.fire({
+                title: 'Sepet Boş',
+                text: 'Lütfen önce sepetinize ürün ekleyin.',
+                icon: 'warning',
+                customClass: {
+                     container: 'swal2-container-top' 
+                }
+            });
+            
+        } else { 
+            window.location.href = 'satinal';
+        }
+    };
+
+    // --- QUICK VIEW ve DİĞER FONKSİYONLAR ---
+
+    window.openQuickView = (id) => {
+        const p = products.find(prod => prod.id === id);
+        if(!p) return;
+        
+        if (quickViewSwiper) { quickViewSwiper.destroy(true, true); quickViewSwiper = null; }
+        
+        document.getElementById('qv-title').innerText = p.name_tr;
+        document.getElementById('qv-desc').innerText = p.full_desc || p.short_desc || 'Detaylı açıklama bulunmamaktadır.';
+        document.getElementById('qv-price').innerText = (p.discounted_price || p.price).toLocaleString('tr-TR') + ' TL';
+        
+        const cat = categories[p.category];
+        document.getElementById('qv-category').innerText = cat ? (cat.name_tr || cat.name) : 'Genel';
+        
+        document.getElementById('qv-add-btn').onclick = () => { window.addToCart(p.id); window.closeQuickView(); };
+        
+        const imageContainer = document.getElementById('qv-image-slides');
+        const images = (p.images && p.images.length > 0) ? p.images : ['https://placehold.co/600x400/1e293b/94a3b8?text=Gorsel+Yok'];
+
+        imageContainer.innerHTML = images.map(img => `
+            <div class="swiper-slide">
+                <img src="${img}" class="w-full h-full object-cover rounded-lg" alt="${p.name_tr} Görseli">
+            </div>
+        `).join('');
+
+        document.getElementById('qv-modal').classList.add('active');
+        
+        setTimeout(() => {
+            quickViewSwiper = new Swiper(".qv-swiper-main", {
+                navigation: { nextEl: ".swiper-button-next", prevEl: ".swiper-button-prev" },
+                loop: true,
+                pagination: { el: '.swiper-pagination', clickable: true },
+            });
+        }, 100);
+    };
+    window.closeQuickView = () => {
+        document.getElementById('qv-modal').classList.remove('active');
+        if (quickViewSwiper) { quickViewSwiper.destroy(true, true); quickViewSwiper = null; }
+    }
+
+    // 🔥 DUYURU RENDER FONKSİYONU DÜZELTİLMİŞ KISIM
+    function renderAnnouncement(data) {
+        const bar = document.getElementById('announcement-bar');
+        const textEl = document.getElementById('announcement-text');
+        
+        // Veri aktif VE metin alanı dolu ise
+        if (data && data.active && data.text) {
+            // Duyuru metnini 10 kez tekrarlayarak kayan yazı (marquee) etkisini oluşturuyoruz.
+            const announcementText = `<span class="mx-4 font-semibold"><i class="fas fa-bolt mr-2"></i> ${data.text} <i class="fas fa-bolt ml-2"></i></span>`;
+            textEl.innerHTML = announcementText.repeat(10); 
+            
+            // CSS'teki `display: none;` kuralını ezerek bandı gösteriyoruz
+            bar.style.display = 'block'; 
+            
+            // Eğer admin panelinizde renk (color) alanı varsa onu kullanır, yoksa varsayılan mavi tonunu kullanır.
+            // Örneğin, data.color = 'bg-red-600' ise, bu sınıfı ekleyebilirsiniz.
+            // Eğer bu özellik yoksa, mevcut `background: #3b82f6;` CSS stiliniz çalışmaya devam edecektir.
+
+        } else {
+            // Duyuru aktif değilse veya metin yoksa bandı gizliyoruz
+            bar.style.display = 'none';
+        }
+    }
+    // 🔥 DUYURU RENDER FONKSİYONU DÜZELTİLMİŞ KISIM BİTİŞ
+
+    function renderFAQ(faqs) {
+        const container = document.getElementById('faq-container');
+        container.innerHTML = faqs.map((f, i) => `
+            <div class="faq-item rounded-xl bg-slate-800 border border-slate-700 overflow-hidden">
+                <button onclick="toggleFaq(this)" class="w-full flex justify-between items-center p-5 text-left font-bold text-white hover:bg-slate-700 focus:outline-none">
+                    <span>${f.q}</span>
+                    <i class="fas fa-chevron-down faq-icon text-blue-500 transition-transform duration-300"></i>
+                </button>
+                <div class="faq-answer bg-slate-900" style="max-height: 0; transition: max-height 0.3s ease-out; overflow: hidden;">
+                    <div class="p-5 text-slate-400 text-sm leading-relaxed border-t border-slate-700">
+                        ${f.a}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    window.toggleFaq = (btn) => {
+        const item = btn.parentElement;
+        const answer = item.querySelector('.faq-answer');
+        const icon = item.querySelector('.faq-icon');
+        const isOpen = item.classList.contains('open');
+
+        document.querySelectorAll('.faq-item.open').forEach(openItem => {
+            openItem.classList.remove('open');
+            openItem.querySelector('.faq-answer').style.maxHeight = null;
+            openItem.querySelector('.faq-icon').classList.remove('rotate-180');
+        });
+        
+        if (!isOpen) {
+            item.classList.add('open');
+            answer.style.maxHeight = answer.scrollHeight + "px";
+            icon.classList.add('rotate-180');
+        }
+    };
+
+    window.toggleMobileMenu = () => {
+        document.getElementById('mobile-menu').classList.toggle('translate-x-full');
+    };
+
+    // Slider (Basit Örnek)
+    const heroImages = [
+        'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=1920&q=80',
+        'https://images.unsplash.com/photo-1510511459019-5dda7724fd87?auto=format&fit=crop&w=1920&q=80',
+        'https://images.unsplash.com/photo-1629904853716-529a39f56360?auto=format&fit=crop&w=1920&q=80'
+    ];
+    let sliderIndex = 0;
+    const sliderDiv = document.getElementById('hero-slider');
+    
+    heroImages.forEach((img, i) => {
+        const slide = document.createElement('div');
+        slide.className = `hero-slide ${i===0 ? 'active' : ''}`;
+        slide.style.backgroundImage = `url('${img}')`;
+        sliderDiv.appendChild(slide);
+    });
+
+    setInterval(() => {
+        const slides = document.querySelectorAll('#hero-slider .hero-slide');
+        slides[sliderIndex].classList.remove('active');
+        sliderIndex = (sliderIndex + 1) % slides.length;
+        slides[sliderIndex].classList.add('active');
+    }, 5000);
+    
+    // --- ALT MENÜ VURGULAMA İŞLEVİ ---
+    function highlightActiveNav() {
+         const currentPath = window.location.pathname.split('/').pop();
+         const navItems = document.querySelectorAll('#bottom-nav a');
+
+         navItems.forEach(item => {
+             const itemPath = item.getAttribute('href'); 
+             
+             // Ana sayfadaysak Ana Sayfa'yı vurgula
+             if (itemPath === currentPath || itemPath === '/' || (itemPath === 'index' && currentPath === '')) {
+                 const icon = item.querySelector('i');
+                 const span = item.querySelector('span');
+                 
+                 icon.classList.remove('text-blue-400', 'text-red-400');
+                 icon.classList.add('text-white'); 
+                 span.classList.add('text-white', 'font-semibold');
+                 item.classList.add('bg-slate-800');
+             }
+         });
+    }
+
+
+    init();
+</script>
+
+<div id="bottom-nav" class="fixed bottom-0 left-0 z-50 w-full bg-slate-900 border-t border-red-500/30 md:hidden">
+    <div class="grid grid-cols-2 h-full max-w-lg mx-auto font-medium">
+        
+        <a href="index" class="inline-flex flex-col items-center justify-center h-14 group hover:bg-slate-800 transition duration-150">
+            <i class="fas fa-home text-xl text-blue-400 group-hover:text-blue-500 transition"></i>
+            <span class="text-xs text-slate-300 group-hover:text-white mt-0.5">Ana Sayfa</span>
+        </a>
+        
+        <a href="#" onclick="checkLoginForOrders(event)" class="inline-flex flex-col items-center justify-center h-14 group hover:bg-slate-800 transition duration-150 border-l border-slate-700">
+            <i class="fas fa-box-open text-xl text-red-400 group-hover:text-red-500 transition"></i>
+            <span class="text-xs text-slate-300 group-hover:text-white mt-0.5">Siparişlerim</span>
+        </a>
+        
+    </div>
+</div>
+
+</body>
+</html>
