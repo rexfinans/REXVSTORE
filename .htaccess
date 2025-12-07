@@ -1,0 +1,12 @@
+# URL Yeniden Yazma Motorunu Başlat
+RewriteEngine On
+RewriteBase /
+
+# .html uzantısını URL'den kaldırma kuralı
+# Kullanıcı /login yazdığında, arka planda /login.html dosyasını yükler.
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}\.html -f
+RewriteRule ^([^\.]+)/?$ $1.html [L]
+
+# index.html dosyasını URL'den tamamen gizleme kuralı
+RewriteRule ^index\.html$ / [R=301,L]
