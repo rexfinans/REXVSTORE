@@ -55,27 +55,54 @@
         .hero-slide.active { opacity: 1; }
         .hero-overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.9); z-index: 2; }
 
-        /* --- Ürün Kartları --- */
-        .product-card { transition: transform 0.3s ease, box-shadow 0.3s ease; border: 1px solid #1e293b; background-color: #1e293b; position: relative; }
+        /* --- Ürün Kartları (KONUMLANDIRMA İÇİN KRİTİK) --- */
+        .product-card { 
+            transition: transform 0.3s ease, box-shadow 0.3s ease; 
+            border: 1px solid #1e293b; 
+            background-color: #1e293b; 
+            
+            /* 🚀 KRİTİK 1: Etiketi kendi sınırları içinde tutar */
+            position: relative; 
+            
+        }
         .product-card:hover { transform: translateY(-8px); box-shadow: 0 20px 30px rgba(0, 0, 0, 0.5); border-color: #3b82f6; }
         
-        /* 🚩 YENİ BAYRAK (RIBBON) STİLİ */
-.discount-badge {
-    position: absolute;
-    top: 18px;         /* Yukarıdan başlangıç pozisyonu */
-    right: -40px;      /* Sağa doğru taşma miktarı (bayrak görünümü için) */
-    background-color: #ef4444; /* Kırmızı arka plan */
-    color: white; 
-    font-size: 10px; 
-    font-weight: bold; 
-    padding: 4px 40px; /* Daha uzun ve dolgun bir bayrak için */
-    transform: rotate(45deg); /* 45 derece sağa eğim (bayrak) */
-    z-index: 100;      
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-    border: 1px solid #b91c1c;
-    line-height: 1.2; 
-    text-align: center;
-}
+        /* 🌊 SON DÜZELTME: TAM KÖŞE ROZETİ (SAĞ ÜST) */
+        .discount-badge {
+            position: absolute;
+            top: 0;                     /* TAM ÜST KENAR */
+            right: 0;                   /* TAM SAĞ KENAR */
+            
+            /* 🔥 GÖZ ALICI KIRMIZI */
+            background-color: #dc2626;  
+            color: white;               
+            font-size: 11px; 
+            font-weight: 800;          
+            padding: 6px 10px;          
+            
+            /* Köşeden sıfır durması için kenar yuvarlamasını sadece alt-sol köşeye uyguluyoruz */
+            border-radius: 0 0 0 8px; 
+            
+            transform: none;           
+            animation: none;
+            
+            clip-path: none; 
+            
+            z-index: 10;              
+            box-shadow: 0 4px 10px rgba(220, 38, 38, 0.5); 
+            line-height: 1; 
+            text-align: center;
+        }
+        
+        /* ⚡ Sepete Ekle Butonu İçin Hafif Titreme/Vurgu Animasyonu */
+        @keyframes shake-button {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); box-shadow: 0 0 15px rgba(239, 68, 68, 0.7); } /* Hafif büyütme ve kırmızı gölge vurgusu */
+        }
+
+        .add-to-cart-shake {
+            animation: shake-button 3s ease-in-out infinite; 
+        }
 
         /* --- BUTON ANİMASYONLARI (GÜÇLÜ) --- */
         .btn-animated {
@@ -98,7 +125,7 @@
 
         /* --- Canlı Destek Butonu --- */
         #live-support-btn {
-            position: fixed; bottom: 76px; right: 20px; z-index: 1000; /* Mobil menü üstüne alındı */
+            position: fixed; bottom: 76px; right: 20px; z-index: 1000; 
             background: linear-gradient(135deg, #0088cc, #005f8f); 
             color: white; width: 50px; height: 50px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
@@ -110,7 +137,7 @@
         
         @media (min-width: 768px) {
              #live-support-btn {
-                 bottom: 20px; /* Masaüstünde eski yerine */
+                 bottom: 20px; 
              }
         }
         
@@ -138,19 +165,19 @@
             border: 1px solid #334155;
         }
         
-        /* 🔥 QUICK VIEW MODAL İÇİN YENİ KAYDIRMA YAPISI (TEK BİR KAYDIRILABİLİR BÖLÜM) */
+        /* 🚀 QUICK VIEW MODAL İÇİN KAYDIRMA YAPISI */
         #qv-modal .modal-box {
             max-width: 800px; 
-            height: 90vh; /* Tam yükseklik ayarı */
+            height: 90vh; 
             display: flex;
             flex-direction: column; 
         }
         
         #qv-modal .qv-main-content {
             display: flex;
-            flex-direction: column; /* Mobilde dikey */
+            flex-direction: column; 
             flex-grow: 1;
-            overflow-y: auto; /* Ana içeriği kaydırılabilir yaptık */
+            overflow-y: auto; 
         }
         
         /* İÇERİK KISMI */
@@ -161,7 +188,7 @@
         /* GÖRSEL KISMI */
         #qv-modal .qv-image-container {
             flex-shrink: 0; 
-            max-height: 40vh; /* Mobil Görsel Yüksekliği */
+            max-height: 40vh; 
         }
         
         /* SABİT BUTONLAR */
@@ -180,20 +207,20 @@
                 max-height: 90vh;
             }
             #qv-modal .qv-main-content {
-                flex-direction: row; /* Masaüstünde yatay */
-                overflow-y: hidden; /* Dış konteyner kaymasın */
+                flex-direction: row; 
+                overflow-y: hidden; 
             }
             #qv-modal .qv-image-container {
                 width: 40%; 
-                max-height: 100%; /* İçeriğe göre ayarlanır */
+                max-height: 100%; 
             }
             #qv-modal .qv-content-wrapper {
                 width: 60%;
-                overflow-y: auto; /* Sadece açıklama kısmı kayar */
-                max-height: calc(90vh - 80px); /* Modal yüksekliğine göre ayarlandı */
+                overflow-y: auto; 
+                max-height: calc(90vh - 80px); 
             }
             #qv-modal .qv-fixed-footer {
-                 position: sticky; /* Masaüstünde alt butonu sabitle */
+                 position: sticky; 
                  bottom: 0;
             }
         }
@@ -242,6 +269,7 @@
         }
 
     </style>
+    
 </head>
 <body class="flex flex-col min-h-screen">
 
